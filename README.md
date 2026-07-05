@@ -150,3 +150,7 @@ The current security and lifecycle contract is:
 - SAR passwords are optional per note and stored only as strong hashes.
 - Owner deletes are soft deletes; expired and deleted SARs remain admin-visible for 30 days, then cleanup purges them.
 - Admins can lower the global expiry limit for future SAR creation and future expiry edits, but existing SAR expiries are left unchanged.
+
+## License
+
+[0BSD](LICENSE)
