@@ -1,0 +1,9 @@
+.tmp-agent-scratch/
+.cline*
+*.code-workspace
+node_modules/
+dist/
+apps/*/dist/
+.env
+apps/*/.env
+*.tsbuildinfo

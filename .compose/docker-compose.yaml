@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-shred_after_reading}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+
+  # Builder services (profile "build") tag local images; runtime services
+  # below consume them. compose-helper `rebuild` builds the profile, then
+  # starts the profile-less runtime services.
+  api-build:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: shred-after-reading-api:local
+    profiles:
+      - build
+
+  api:
+    image: shred-after-reading-api:local
+    environment:
+      PORT: ${PORT:-3000}
+      BODY_SIZE_LIMIT: ${BODY_SIZE_LIMIT:-1048576}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@shred-after-reading.local}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-24}
+      REMEMBER_ME_TTL_DAYS: ${REMEMBER_ME_TTL_DAYS:-30}
+      EMAIL_VERIFICATION_TTL_DAYS: ${EMAIL_VERIFICATION_TTL_DAYS:-7}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-shred_after_reading}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  web-build:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    image: shred-after-reading-web:local
+    profiles:
+      - build
+
+  web:
+    image: shred-after-reading-web:local
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_started
+
+volumes:
+  postgres-data:

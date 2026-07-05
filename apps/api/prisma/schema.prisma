@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                        String   @id @default(cuid())
+  email                     String   @unique
+  passwordHash              String
+  name                      String?
+  emailVerified             DateTime?
+  isAdmin                   Boolean  @default(false)
+  isBanned                  Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  sarCount                  Int      @default(0)
+  accounts                  Account[]
+  sar                       Sar[]
+  sessions                  Session[]
+  emailVerificationToken    EmailVerificationToken[]
+}
+
+model Account {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sarId         String
+  sar           Sar      @relation(fields: [sarId], references: [id], onDelete: Cascade)
+  isShredded    Boolean  @default(false)
+  shredDate     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, sarId])
+  @@index([userId])
+}
+
+model Sar {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title               String
+  content             String
+  passwordHash        String?
+  passwordRequired    Boolean  @default(false)
+  isMarkdown          Boolean  @default(false)
+  metadata            Json?
+  isShredded          Boolean  @default(false)
+  shredDate           DateTime?
+  expiresAt           DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  accounts            Account[]
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token         String   @unique
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model EmailVerificationToken {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token           String   @unique
+  email           String
+  expiresAt       DateTime
+  used            Boolean   @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AppSettings {
+  id                   String   @id @default(cuid())
+  key                  String   @unique
+  value                String?
+  description          String?
+  updatedAt            DateTime @updatedAt
+}
+
+model AdminAudit {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  details     Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+}
